@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "InReach — LinkedIn Outreach",
+  "version": "0.1.0",
+  "description": "Automate personalized LinkedIn connection requests",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "activeTab",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "src/scripts/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/search/*"
+      ],
+      "js": [
+        "src/utils/dom-selectors.js",
+        "src/utils/human-simulator.js",
+        "src/utils/storage.js",
+        "src/scripts/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  }
+}

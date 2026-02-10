@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InReach</title>
+  <link rel="stylesheet" href="popup.css" />
+  <style>
+    /* Custom toggle switch */
+    .toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0; background: #d1d5db; border-radius: 9999px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: ""; position: absolute; left: 2px; top: 2px;
+      width: 20px; height: 20px; background: white; border-radius: 9999px;
+      transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .toggle-switch input:checked + .toggle-slider { background: #2563eb; }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    /* Pulse animation for running state */
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+
+    /* Smooth tab transitions */
+    .tab-content { animation: fadeIn 0.15s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Scrollbar styling */
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+  </style>
+</head>
+<body class="w-[420px] min-h-[520px] bg-gray-50 text-gray-900 font-sans">
+
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-brand-700 to-brand-600 text-white px-5 py-3.5">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center font-bold text-sm backdrop-blur-sm">IR</div>
+        <div>
+          <h1 class="text-base font-bold leading-tight">InReach</h1>
+          <p class="text-[10px] text-white/60 leading-tight">LinkedIn Outreach Tool</p>
+        </div>
+      </div>
+      <div id="header-status" class="flex items-center gap-1.5 bg-white/10 rounded-full px-2.5 py-1">
+        <span id="status-dot" class="w-2 h-2 rounded-full bg-gray-300"></span>
+        <span id="status-text" class="text-xs font-medium">Idle</span>
+      </div>
+    </div>
+    <nav class="flex bg-white/10 rounded-lg p-0.5">
+      <button data-tab="dashboard" class="tab-btn active flex-1 text-xs font-medium py-1.5 rounded-md transition-all">Dashboard</button>
+      <button data-tab="campaign" class="tab-btn flex-1 text-xs font-medium py-1.5 rounded-md transition-all">Campaign</button>
+      <button data-tab="templates" class="tab-btn flex-1 text-xs font-medium py-1.5 rounded-md transition-all">Templates</button>
+      <button data-tab="settings" class="tab-btn flex-1 text-xs font-medium py-1.5 rounded-md transition-all">Settings</button>
+    </nav>
+  </header>
+
+  <!-- Warning Banner (hidden by default) -->
+  <div id="warning-banner" class="hidden px-4 py-2.5 text-sm flex items-center gap-2">
+    <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+    <span id="warning-text" class="flex-1"></span>
+    <button id="dismiss-warning" class="text-current opacity-60 hover:opacity-100 text-lg leading-none">&times;</button>
+  </div>
+
+  <!-- Tab Content -->
+  <main class="p-4">
+
+    <!-- ═══════════ Dashboard Tab ═══════════ -->
+    <section id="tab-dashboard" class="tab-content">
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-3 gap-2.5 mb-4">
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center shadow-sm">
+          <div class="text-2xl font-bold text-brand-600" id="stat-sent">0</div>
+          <div class="text-[11px] text-gray-400 mt-0.5 font-medium">Sent</div>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center shadow-sm">
+          <div class="text-2xl font-bold text-amber-500" id="stat-skipped">0</div>
+          <div class="text-[11px] text-gray-400 mt-0.5 font-medium">Skipped</div>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center shadow-sm">
+          <div class="text-2xl font-bold text-red-400" id="stat-errors">0</div>
+          <div class="text-[11px] text-gray-400 mt-0.5 font-medium">Errors</div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-4">
+        <div class="flex justify-between text-xs mb-2">
+          <span class="text-gray-500 font-medium">Daily Progress</span>
+          <span id="progress-label" class="text-brand-600 font-semibold">0/25</span>
+        </div>
+        <div class="w-full bg-gray-100 rounded-full h-2.5">
+          <div id="progress-bar" class="bg-gradient-to-r from-brand-500 to-brand-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <p class="text-[10px] text-gray-400 mt-1.5" id="daily-counter">0 of 0 connection requests sent today</p>
+      </div>
+
+      <!-- Activity Log -->
+      <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div class="px-3 py-2.5 border-b border-gray-50 flex items-center justify-between">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Activity</h3>
+          <button id="refresh-log" class="text-[11px] text-brand-600 hover:text-brand-700 font-medium">Refresh</button>
+        </div>
+        <div id="activity-log" class="max-h-[180px] overflow-y-auto custom-scroll divide-y divide-gray-50">
+          <div class="px-3 py-6 text-sm text-gray-300 text-center">No activity yet</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ Campaign Tab ═══════════ -->
+    <section id="tab-campaign" class="tab-content hidden">
+      <div class="space-y-4">
+
+        <!-- Dry Run Mode — prominent toggle -->
+        <div id="dry-run-card" class="rounded-xl p-3.5 border-2 border-dashed border-gray-200 bg-white flex items-center justify-between">
+          <div>
+            <div class="text-sm font-semibold text-gray-800">Dry Run Mode</div>
+            <p class="text-xs text-gray-400 mt-0.5">Simulates everything without sending requests</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="dry-run-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Search URL -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Target Search URL</label>
+          <input
+            type="url"
+            id="search-url"
+            placeholder="https://www.linkedin.com/search/results/people/?keywords=..."
+            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white placeholder-gray-300"
+          />
+          <p class="text-[11px] text-gray-400 mt-1">Paste the full URL from a LinkedIn people search</p>
+        </div>
+
+        <!-- Template Selection -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Message Template</label>
+          <select
+            id="template-select"
+            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white"
+          >
+            <option value="">Select a template...</option>
+          </select>
+        </div>
+
+        <!-- Template Preview -->
+        <div id="template-preview-container" class="hidden">
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Message Preview</label>
+          <div id="template-preview" class="bg-brand-50 rounded-xl p-3.5 text-sm text-brand-700 border border-brand-100 leading-relaxed"></div>
+        </div>
+
+        <!-- Start/Stop Button -->
+        <button
+          id="start-stop-btn"
+          class="w-full py-3.5 rounded-xl font-bold text-white transition-all duration-200 bg-green-500 hover:bg-green-600 active:bg-green-700 shadow-sm text-sm tracking-wide"
+        >
+          START OUTREACH
+        </button>
+      </div>
+    </section>
+
+    <!-- ═══════════ Templates Tab ═══════════ -->
+    <section id="tab-templates" class="tab-content hidden">
+      <div class="space-y-3">
+        <!-- Template List -->
+        <div id="template-list" class="space-y-2">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Add/Edit Template Form -->
+        <div class="bg-white rounded-xl border border-gray-100 p-4 space-y-3 shadow-sm">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide" id="template-form-title">New Template</h3>
+          <input type="hidden" id="edit-template-id" value="" />
+          <div>
+            <input
+              type="text"
+              id="template-name"
+              placeholder="Template name (e.g., Startup Founders Intro)"
+              class="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder-gray-300"
+            />
+          </div>
+          <div>
+            <textarea
+              id="template-body"
+              rows="4"
+              placeholder="Hi {{firstName}}, I saw your work as {{job}} at {{company}}..."
+              class="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none placeholder-gray-300"
+            ></textarea>
+            <div class="flex items-center gap-1 mt-1.5">
+              <span class="text-[10px] text-gray-400 mr-1">Insert:</span>
+              <button class="placeholder-btn text-[11px] px-2 py-0.5 bg-brand-50 text-brand-600 rounded-md hover:bg-brand-100 font-medium" data-placeholder="{{firstName}}">firstName</button>
+              <button class="placeholder-btn text-[11px] px-2 py-0.5 bg-brand-50 text-brand-600 rounded-md hover:bg-brand-100 font-medium" data-placeholder="{{name}}">name</button>
+              <button class="placeholder-btn text-[11px] px-2 py-0.5 bg-brand-50 text-brand-600 rounded-md hover:bg-brand-100 font-medium" data-placeholder="{{job}}">job</button>
+              <button class="placeholder-btn text-[11px] px-2 py-0.5 bg-brand-50 text-brand-600 rounded-md hover:bg-brand-100 font-medium" data-placeholder="{{company}}">company</button>
+            </div>
+          </div>
+          <div class="flex gap-2 pt-1">
+            <button id="save-template-btn" class="flex-1 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition shadow-sm">Save Template</button>
+            <button id="cancel-template-btn" class="px-5 py-2.5 bg-gray-100 text-gray-500 text-sm font-medium rounded-xl hover:bg-gray-200 transition">Cancel</button>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-gray-400 text-center">LinkedIn connection notes are limited to 300 characters</p>
+      </div>
+    </section>
+
+    <!-- ═══════════ Settings Tab ═══════════ -->
+    <section id="tab-settings" class="tab-content hidden">
+      <div class="space-y-3">
+        <!-- Limits -->
+        <div class="bg-white rounded-xl border border-gray-100 p-4 space-y-3 shadow-sm">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Safety Limits</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1 font-medium">Daily Limit</label>
+              <input type="number" id="setting-daily-limit" min="1" max="40"
+                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1 font-medium">Weekly Limit</label>
+              <input type="number" id="setting-weekly-limit" min="1" max="150"
+                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1 font-medium">Min Cooldown (sec)</label>
+              <input type="number" id="setting-cooldown-min" min="10" max="300"
+                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1 font-medium">Max Cooldown (sec)</label>
+              <input type="number" id="setting-cooldown-max" min="30" max="600"
+                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Business Hours -->
+        <div class="bg-white rounded-xl border border-gray-100 p-4 space-y-3 shadow-sm">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Business Hours Only</h3>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-business-hours" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1 font-medium">Start Hour</label>
+              <input type="number" id="setting-hours-start" min="0" max="23"
+                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1 font-medium">End Hour</label>
+              <input type="number" id="setting-hours-end" min="0" max="23"
+                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Warmup -->
+        <div class="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Warmup Mode</h3>
+              <p class="text-[11px] text-gray-400 mt-0.5">Gradually increases your daily limit</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-warmup" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="mt-2 text-[11px] text-gray-500 font-medium" id="warmup-status"></div>
+        </div>
+
+        <!-- Save -->
+        <button id="save-settings-btn" class="w-full py-3 bg-brand-600 text-white text-sm font-bold rounded-xl hover:bg-brand-700 transition shadow-sm">
+          Save Settings
+        </button>
+
+        <!-- Dashboard Connection -->
+        <div class="bg-white rounded-xl border border-gray-100 p-4 space-y-3 shadow-sm">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Connect to Dashboard</h3>
+          <div id="dashboard-status" class="text-xs text-gray-400">Not connected</div>
+          <div>
+            <label class="block text-[11px] text-gray-400 mb-1 font-medium">API Key</label>
+            <input type="password" id="dashboard-api-key"
+              placeholder="ir_xxxxxxxxxxxxxxxx..."
+              class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 font-mono" />
+          </div>
+          <div class="flex gap-2">
+            <button id="connect-dashboard-btn" class="flex-1 py-2.5 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700 transition">Connect</button>
+            <button id="disconnect-dashboard-btn" class="px-4 py-2.5 bg-gray-100 text-gray-500 text-xs font-medium rounded-lg hover:bg-gray-200 transition">Disconnect</button>
+          </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="bg-white rounded-xl border border-gray-100 p-4 space-y-2 shadow-sm">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Data Management</h3>
+          <div class="flex gap-2">
+            <button id="export-contacts-btn" class="flex-1 py-2.5 bg-gray-50 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-100 transition border border-gray-200">Export Contacts (CSV)</button>
+            <button id="clear-log-btn" class="flex-1 py-2.5 bg-red-50 text-red-500 text-xs font-medium rounded-lg hover:bg-red-100 transition border border-red-100">Clear Activity Log</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
