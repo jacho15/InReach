@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,8 +16,7 @@ interface TopbarProps {
 }
 
 export function Topbar({ onMenuClick }: TopbarProps) {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user, signOut } = useAuth();
 
   return (
     <header className="flex h-14 items-center justify-between border-b bg-white px-4">
@@ -49,7 +48,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               <p className="font-medium">{user?.name}</p>
               <p className="text-muted-foreground text-xs">{user?.email}</p>
             </div>
-            <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+            <DropdownMenuItem onClick={() => signOut()}>
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

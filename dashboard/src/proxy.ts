@@ -1,12 +1,12 @@
-import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow public routes
   if (
-    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/auth") ||
     pathname.startsWith("/login") ||
     pathname === "/"
   ) {
@@ -19,8 +19,31 @@ export async function proxy(req: NextRequest) {
   }
 
   // Dashboard API routes and pages: require session
-  const token = await getToken({ req });
-  if (!token) {
+  const response = NextResponse.next();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          for (const { name, value, options } of cookiesToSet) {
+            req.cookies.set(name, value);
+            response.cookies.set(name, value, options);
+          }
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -28,7 +51,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

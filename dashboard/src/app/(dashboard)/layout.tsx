@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SessionProvider } from "@/components/providers/SessionProvider";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 
@@ -13,7 +13,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <SessionProvider>
+    <AuthProvider>
       <div className="flex h-screen overflow-hidden">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="flex flex-1 flex-col overflow-hidden">
@@ -23,6 +23,6 @@ export default function DashboardLayout({
           </main>
         </div>
       </div>
-    </SessionProvider>
+    </AuthProvider>
   );
 }
