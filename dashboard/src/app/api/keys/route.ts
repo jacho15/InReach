@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { handleApiError } from "@/lib/utils";
 import crypto from "crypto";
 
 function generateApiKey(): string {
@@ -27,8 +28,8 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(keys);
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error) {
+    return handleApiError(error);
   }
 }
 
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
 
     // Return the raw key only once — it won't be stored
     return NextResponse.json({ key: rawKey, name, keyPrefix });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error) {
+    return handleApiError(error);
   }
 }

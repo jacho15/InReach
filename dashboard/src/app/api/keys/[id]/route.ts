@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { handleApiError } from "@/lib/utils";
 
 export async function DELETE(
   _req: Request,
@@ -20,7 +21,7 @@ export async function DELETE(
 
     await prisma.apiKey.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error) {
+    return handleApiError(error);
   }
 }

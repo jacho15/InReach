@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Plus } from "lucide-react";
+import { STATUS_COLORS } from "@/lib/utils";
 
 interface Campaign {
   id: string;
@@ -23,20 +24,17 @@ interface Campaign {
   _count: { contacts: number };
 }
 
-const statusColors: Record<string, string> = {
-  active: "bg-green-100 text-green-800",
-  paused: "bg-yellow-100 text-yellow-800",
-  completed: "bg-blue-100 text-blue-800",
-  archived: "bg-gray-100 text-gray-800",
-};
-
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
   useEffect(() => {
     fetch("/api/campaigns")
-      .then((r) => r.json())
-      .then(setCampaigns);
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load campaigns");
+        return r.json();
+      })
+      .then(setCampaigns)
+      .catch((e) => console.error("Campaigns error:", e));
   }, []);
 
   return (
@@ -68,7 +66,7 @@ export default function CampaignsPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{c.name}</CardTitle>
                     <Badge
-                      className={statusColors[c.status] || ""}
+                      className={STATUS_COLORS[c.status] || ""}
                       variant="secondary"
                     >
                       {c.status}

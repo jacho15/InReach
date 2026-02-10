@@ -24,6 +24,7 @@
         "https://www.linkedin.com/search/*"
       ],
       "js": [
+        "src/utils/constants.js",
         "src/utils/dom-selectors.js",
         "src/utils/human-simulator.js",
         "src/utils/storage.js",

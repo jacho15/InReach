@@ -496,11 +496,11 @@ InReach/
 ### Tech Stack
 | Layer | Technology | Rationale |
 |-------|-----------|-----------|
-| Frontend + API | **Next.js 14+ (App Router)** | Full-stack React, API routes, server components |
-| Database | **PostgreSQL** (via Supabase or Neon) | Relational — contacts, messages, campaigns have relationships |
-| Auth | **Clerk** or **NextAuth** | Multi-user SaaS auth with social login |
+| Frontend + API | **Next.js 16 (App Router)** | Full-stack React, API routes, server components |
+| Database | **PostgreSQL** + **Prisma ORM** | Relational — contacts, messages, campaigns have relationships |
+| Auth | **NextAuth** (Google OAuth) | Simple social login, no extra auth service needed |
 | Notifications | **Web Push** + **Resend** (email) | Real-time browser + email alerts |
-| Hosting | **Vercel** (app) + **Supabase** (db) | Fast deployment, generous free tiers |
+| Hosting | **Vercel** (app) + any PostgreSQL host | Fast deployment, flexible DB hosting |
 
 ### Data Model (Relational)
 

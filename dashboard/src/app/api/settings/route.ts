@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { z } from "zod";
+import { handleApiError } from "@/lib/utils";
 
 const settingsSchema = z.object({
   dailyLimit: z.number().min(1).max(100).optional(),
@@ -28,8 +29,8 @@ export async function GET() {
       });
     }
     return NextResponse.json(settings);
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error) {
+    return handleApiError(error);
   }
 }
 
@@ -47,9 +48,6 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json(settings);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return handleApiError(error);
   }
 }

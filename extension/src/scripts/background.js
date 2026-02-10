@@ -4,8 +4,12 @@
  * coordinates between popup and content script, handles tab management.
  */
 
-// ── Sync Layer Import ──
+// ── Imports ──
+importScripts("../utils/constants.js");
+importScripts("../utils/storage.js");
 importScripts("../utils/sync-layer.js");
+
+const { getSettings, getTemplates, addActivityEntry, getDailyStats, canSendMore, getEffectiveDailyLimit } = self.Storage;
 
 // ── State ──
 
@@ -19,80 +23,6 @@ let automationState = {
   dryRun: false,
   campaignId: null, // Dashboard campaign ID (if connected)
 };
-
-// ── Storage Helpers (background can't use window.Storage) ──
-
-async function storageGet(keys) {
-  return chrome.storage.local.get(keys);
-}
-
-async function storageSet(data) {
-  return chrome.storage.local.set(data);
-}
-
-async function getSettings() {
-  const defaults = {
-    dailyLimit: 25,
-    weeklyLimit: 100,
-    cooldownMin: 30000,
-    cooldownMax: 90000,
-    businessHoursOnly: true,
-    businessHoursStart: 9,
-    businessHoursEnd: 18,
-    warmupEnabled: true,
-    warmupDay: 1,
-    dryRun: false,
-  };
-  const { settings } = await storageGet("settings");
-  return { ...defaults, ...settings };
-}
-
-async function getTemplates() {
-  const { templates } = await storageGet("templates");
-  return templates || [];
-}
-
-async function addActivityEntry(entry) {
-  const { activityLog } = await storageGet("activityLog");
-  const log = activityLog || [];
-  log.unshift({ ...entry, timestamp: new Date().toISOString() });
-  if (log.length > 500) log.length = 500;
-  await storageSet({ activityLog: log });
-}
-
-async function getDailyStats() {
-  const today = new Date().toISOString().split("T")[0];
-  const { dailyStats } = await storageGet("dailyStats");
-  if (!dailyStats || dailyStats.date !== today) {
-    const fresh = { date: today, sent: 0, skipped: 0, errors: 0 };
-    await storageSet({ dailyStats: fresh });
-    return fresh;
-  }
-  return dailyStats;
-}
-
-async function canSendMore() {
-  const settings = await getSettings();
-  const daily = await getDailyStats();
-
-  let effectiveLimit = settings.dailyLimit;
-  if (settings.warmupEnabled) {
-    effectiveLimit = Math.min(settings.dailyLimit, settings.warmupDay * 5);
-  }
-
-  if (daily.sent >= effectiveLimit) {
-    return { allowed: false, reason: "daily_limit" };
-  }
-
-  if (settings.businessHoursOnly) {
-    const hour = new Date().getHours();
-    if (hour < settings.businessHoursStart || hour >= settings.businessHoursEnd) {
-      return { allowed: false, reason: "outside_business_hours" };
-    }
-  }
-
-  return { allowed: true };
-}
 
 // ── Tab Management ──
 
@@ -127,6 +57,7 @@ async function ensureContentScriptInjected(tabId) {
       await chrome.scripting.executeScript({
         target: { tabId },
         files: [
+          "src/utils/constants.js",
           "src/utils/dom-selectors.js",
           "src/utils/human-simulator.js",
           "src/utils/storage.js",
@@ -184,7 +115,7 @@ async function startAutomation(searchUrl, templateId) {
     dryRun: settings.dryRun,
   };
 
-  await storageSet({ automationState: { ...automationState } });
+  await chrome.storage.local.set({ automationState: { ...automationState } });
   await addActivityEntry({
     type: "automation_started",
     searchUrl,
@@ -212,11 +143,11 @@ async function stopAutomation() {
   if (automationState.tabId) {
     try {
       await chrome.tabs.sendMessage(automationState.tabId, { type: "STOP" });
-    } catch (_) {}
+    } catch (e) { console.warn("[InReach BG] Failed to send stop message:", e); }
   }
 
   automationState.status = "idle";
-  await storageSet({ automationState: { status: "idle" } });
+  await chrome.storage.local.set({ automationState: { status: "idle" } });
   await addActivityEntry({ type: "automation_stopped" });
 }
 
@@ -248,7 +179,7 @@ async function handlePageComplete(payload) {
   // Check if we should continue to next page
   if (payload.noResults) {
     automationState.status = "idle";
-    await storageSet({ automationState: { status: "idle" } });
+    await chrome.storage.local.set({ automationState: { status: "idle" } });
     await addActivityEntry({ type: "automation_complete", reason: "no_more_results" });
     return;
   }
@@ -257,7 +188,7 @@ async function handlePageComplete(payload) {
   const limitCheck = await canSendMore();
   if (!limitCheck.allowed) {
     automationState.status = "idle";
-    await storageSet({ automationState: { status: "idle" } });
+    await chrome.storage.local.set({ automationState: { status: "idle" } });
     await addActivityEntry({ type: "automation_paused", reason: limitCheck.reason });
     return;
   }
@@ -286,13 +217,13 @@ async function handlePageComplete(payload) {
     } else {
       // No more pages
       automationState.status = "idle";
-      await storageSet({ automationState: { status: "idle" } });
+      await chrome.storage.local.set({ automationState: { status: "idle" } });
       await addActivityEntry({ type: "automation_complete", reason: "no_more_pages" });
     }
   } catch (e) {
     console.error("[InReach BG] Error navigating to next page:", e);
     automationState.status = "idle";
-    await storageSet({ automationState: { status: "idle" } });
+    await chrome.storage.local.set({ automationState: { status: "idle" } });
   }
 }
 
@@ -325,7 +256,7 @@ async function handleActionComplete(payload) {
 
 async function handleWarning(payload) {
   automationState.status = "paused";
-  await storageSet({ automationState: { status: "paused" } });
+  await chrome.storage.local.set({ automationState: { status: "paused" } });
   await addActivityEntry({
     type: "warning",
     warningType: payload.type,
@@ -336,7 +267,7 @@ async function handleWarning(payload) {
   if (automationState.tabId) {
     try {
       await chrome.tabs.sendMessage(automationState.tabId, { type: "STOP" });
-    } catch (_) {}
+    } catch (e) { console.warn("[InReach BG] Failed to send stop message:", e); }
   }
 }
 
@@ -362,10 +293,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case "GET_STATUS": {
         const daily = await getDailyStats();
         const settings = await getSettings();
-        let effectiveLimit = settings.dailyLimit;
-        if (settings.warmupEnabled) {
-          effectiveLimit = Math.min(settings.dailyLimit, settings.warmupDay * 5);
-        }
+        const effectiveLimit = getEffectiveDailyLimit(settings);
         sendResponse({
           status: automationState.status,
           currentPage: automationState.currentPage,
@@ -381,7 +309,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case "GET_STATS": {
         const stats = await getDailyStats();
         const log = await (async () => {
-          const { activityLog } = await storageGet("activityLog");
+          const { activityLog } = await chrome.storage.local.get("activityLog");
           return (activityLog || []).slice(0, 50);
         })();
         sendResponse({ stats, activityLog: log });
@@ -409,7 +337,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       case "LIMIT_REACHED": {
         automationState.status = "idle";
-        await storageSet({ automationState: { status: "idle" } });
+        await chrome.storage.local.set({ automationState: { status: "idle" } });
         await addActivityEntry({
           type: "limit_reached",
           reason: message.payload.reason,
@@ -453,7 +381,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const settings = await getSettings();
     if (!settings.warmupEnabled) return;
 
-    const { lastWarmupDate } = await storageGet("lastWarmupDate");
+    const { lastWarmupDate } = await chrome.storage.local.get("lastWarmupDate");
     const today = new Date().toISOString().split("T")[0];
 
     if (lastWarmupDate !== today) {
@@ -461,7 +389,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         settings.warmupDay + 1,
         Math.ceil(settings.dailyLimit / 5)
       );
-      await storageSet({
+      await chrome.storage.local.set({
         settings: { ...settings, warmupDay: newDay },
         lastWarmupDate: today,
       });

@@ -8,8 +8,8 @@
 (() => {
   "use strict";
 
-  const S = window.SELECTORS;
-  const H = window.HumanSimulator;
+  const Selectors = window.SELECTORS;
+  const Sim = window.HumanSimulator;
   const Store = window.Storage;
 
   let isRunning = false;
@@ -25,13 +25,13 @@
   async function waitForResults(timeoutMs = 10000) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
-      const cards = document.querySelectorAll(S.searchResultCard);
+      const cards = document.querySelectorAll(Selectors.searchResultCard);
       if (cards.length > 0) return true;
 
       // Check for no-results page
-      if (document.querySelector(S.noResults)) return false;
+      if (document.querySelector(Selectors.noResults)) return false;
 
-      await H.randomDelay(500, 1000);
+      await Sim.randomDelay(500, 1000);
     }
     return false;
   }
@@ -43,10 +43,10 @@
    */
   function scrapeProfileCard(card) {
     try {
-      const nameEl = card.querySelector(S.profileName);
-      const headlineEl = card.querySelector(S.profileHeadline);
-      const companyEl = card.querySelector(S.profileCompany);
-      const linkEl = card.querySelector(S.profileLink);
+      const nameEl = card.querySelector(Selectors.profileName);
+      const headlineEl = card.querySelector(Selectors.profileHeadline);
+      const companyEl = card.querySelector(Selectors.profileCompany);
+      const linkEl = card.querySelector(Selectors.profileLink);
 
       const name = nameEl?.textContent?.trim() || null;
       const headline = headlineEl?.textContent?.trim() || "";
@@ -67,7 +67,7 @@
    * @returns {Array<{card: HTMLElement, profile: object}>}
    */
   function scrapeSearchResults() {
-    const cards = document.querySelectorAll(S.searchResultCard);
+    const cards = document.querySelectorAll(Selectors.searchResultCard);
     const results = [];
 
     for (const card of cards) {
@@ -110,18 +110,18 @@
    */
   async function shouldSkip(card, profile) {
     // Already connected
-    if (card.querySelector(S.alreadyConnected)) {
+    if (card.querySelector(Selectors.alreadyConnected)) {
       return { skip: true, reason: "already_connected" };
     }
 
     // Pending invitation
-    const pendingEl = card.querySelector(S.pendingLabel);
+    const pendingEl = card.querySelector(Selectors.pendingLabel);
     if (pendingEl && pendingEl.textContent?.toLowerCase().includes("pending")) {
       return { skip: true, reason: "pending_invitation" };
     }
 
     // No connect button available
-    const connectBtn = card.querySelector(S.connectButton);
+    const connectBtn = card.querySelector(Selectors.connectButton);
     if (!connectBtn) {
       return { skip: true, reason: "no_connect_button" };
     }
@@ -144,13 +144,13 @@
    * @returns {object|null} Warning info or null if safe
    */
   function detectWarnings() {
-    if (document.querySelector(S.captchaFrame)) {
+    if (document.querySelector(Selectors.captchaFrame)) {
       return { type: "captcha" };
     }
-    if (document.querySelector(S.rateLimitMessage)) {
+    if (document.querySelector(Selectors.rateLimitMessage)) {
       return { type: "rate_limit" };
     }
-    const warning = document.querySelector(S.warningBanner);
+    const warning = document.querySelector(Selectors.warningBanner);
     if (warning) {
       return { type: "warning", message: warning.textContent?.trim() };
     }
@@ -172,69 +172,69 @@
   async function sendConnectionRequest(card, profile, message, dryRun = false) {
     try {
       // Step 1: Find the Connect button
-      const connectBtn = card.querySelector(S.connectButton);
+      const connectBtn = card.querySelector(Selectors.connectButton);
       if (!connectBtn) {
         return { success: false, error: "connect_button_not_found" };
       }
 
       // Step 2: Scroll card into view
-      await H.humanScroll(card);
-      await H.randomDelay(500, 1500);
+      await Sim.humanScroll(card);
+      await Sim.randomDelay(500, 1500);
 
       // Step 3: Click Connect
-      await H.humanClick(connectBtn);
-      await H.randomDelay(2000, 4000);
+      await Sim.humanClick(connectBtn);
+      await Sim.randomDelay(2000, 4000);
 
       // Step 4: Wait for modal and find "Add a note" button
-      const addNoteBtn = await waitForElement(S.addNoteButton, 5000);
+      const addNoteBtn = await waitForElement(Selectors.addNoteButton, 5000);
       if (!addNoteBtn) {
         // Some profiles go directly to send — try to find the textarea
-        const textarea = document.querySelector(S.noteTextarea);
+        const textarea = document.querySelector(Selectors.noteTextarea);
         if (!textarea) {
           return { success: false, error: "add_note_button_not_found" };
         }
       } else {
         // Click "Add a note"
-        await H.humanClick(addNoteBtn);
-        await H.randomDelay(1000, 2000);
+        await Sim.humanClick(addNoteBtn);
+        await Sim.randomDelay(1000, 2000);
       }
 
       // Step 5: Find and fill the message textarea
-      const textarea = await waitForElement(S.noteTextarea, 3000);
+      const textarea = await waitForElement(Selectors.noteTextarea, 3000);
       if (!textarea) {
         return { success: false, error: "textarea_not_found" };
       }
 
       // Step 6: Type the personalized message
-      await H.simulateTyping(textarea, message);
-      await H.randomDelay(2000, 5000);
+      await Sim.simulateTyping(textarea, message);
+      await Sim.randomDelay(2000, 5000);
 
       // Step 7: Send or dry-run
       if (dryRun) {
         console.log(`[InReach DRY RUN] Would send to ${profile.name}: "${message}"`);
         // Close the modal
-        const cancelBtn = document.querySelector(S.cancelButton);
-        if (cancelBtn) await H.humanClick(cancelBtn);
+        const cancelBtn = document.querySelector(Selectors.cancelButton);
+        if (cancelBtn) await Sim.humanClick(cancelBtn);
         return { success: true, dryRun: true };
       }
 
       // Click Send
-      const sendBtn = document.querySelector(S.sendButton);
+      const sendBtn = document.querySelector(Selectors.sendButton);
       if (!sendBtn) {
         return { success: false, error: "send_button_not_found" };
       }
 
-      await H.humanClick(sendBtn);
-      await H.randomDelay(300, 600);
+      await Sim.humanClick(sendBtn);
+      await Sim.randomDelay(300, 600);
 
       return { success: true };
     } catch (error) {
       console.error("[InReach] Error sending connection request:", error);
       // Try to close any open modal
       try {
-        const cancelBtn = document.querySelector(S.cancelButton);
+        const cancelBtn = document.querySelector(Selectors.cancelButton);
         if (cancelBtn) cancelBtn.click();
-      } catch (_) {}
+      } catch (e) { console.warn("[InReach] Failed to close modal:", e); }
       return { success: false, error: error.message };
     }
   }
@@ -350,7 +350,7 @@
       // Cooldown between profiles
       if (!shouldStop) {
         const settings = await Store.getSettings();
-        await H.gaussianDelay(settings.cooldownMin, settings.cooldownMax);
+        await Sim.gaussianDelay(settings.cooldownMin, settings.cooldownMax);
       }
     }
 
@@ -366,17 +366,17 @@
    * @returns {Promise<boolean>} true if navigation succeeded
    */
   async function goToNextPage() {
-    const nextBtn = document.querySelector(S.nextPageButton);
+    const nextBtn = document.querySelector(Selectors.nextPageButton);
     if (!nextBtn || nextBtn.disabled) {
       return false;
     }
 
-    await H.humanScroll(nextBtn);
-    await H.randomDelay(500, 1000);
-    await H.humanClick(nextBtn);
+    await Sim.humanScroll(nextBtn);
+    await Sim.randomDelay(500, 1000);
+    await Sim.humanClick(nextBtn);
 
     // Wait for new page to load
-    await H.randomDelay(2000, 4000);
+    await Sim.randomDelay(2000, 4000);
     const loaded = await waitForResults(10000);
     return loaded;
   }

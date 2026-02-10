@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Download, Search } from "lucide-react";
+import { STATUS_COLORS, escapeCSV } from "@/lib/utils";
 
 interface Contact {
   id: string;
@@ -46,14 +47,6 @@ interface ContactsResponse {
   totalPages: number;
 }
 
-const statusColors: Record<string, string> = {
-  sent: "bg-blue-100 text-blue-800",
-  accepted: "bg-green-100 text-green-800",
-  pending: "bg-yellow-100 text-yellow-800",
-  skipped: "bg-gray-100 text-gray-800",
-  error: "bg-red-100 text-red-800",
-};
-
 export default function ContactsPage() {
   const [data, setData] = useState<ContactsResponse | null>(null);
   const [search, setSearch] = useState("");
@@ -64,8 +57,13 @@ export default function ContactsPage() {
     const params = new URLSearchParams({ page: String(page) });
     if (search) params.set("search", search);
     if (status) params.set("status", status);
-    const res = await fetch(`/api/contacts?${params}`);
-    setData(await res.json());
+    try {
+      const res = await fetch(`/api/contacts?${params}`);
+      if (!res.ok) throw new Error("Failed to load contacts");
+      setData(await res.json());
+    } catch (e) {
+      console.error("Contacts error:", e);
+    }
   }, [page, search, status]);
 
   useEffect(() => {
@@ -84,7 +82,7 @@ export default function ContactsPage() {
       c.campaign?.name || "",
       c.sentAt || "",
     ]);
-    const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+    const csv = [headers, ...rows].map((r) => r.map((v) => escapeCSV(v)).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -175,7 +173,7 @@ export default function ContactsPage() {
                       </TableCell>
                       <TableCell>
                         <Badge
-                          className={statusColors[c.status] || ""}
+                          className={STATUS_COLORS[c.status] || ""}
                           variant="secondary"
                         >
                           {c.status}

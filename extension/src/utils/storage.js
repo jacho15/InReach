@@ -274,27 +274,44 @@ async function advanceWarmupDay() {
   }
 }
 
-// Make available in content script context
+// ── Warmup Calculation ──
+
+function getEffectiveDailyLimit(settings) {
+  if (settings.warmupEnabled) {
+    return Math.min(settings.dailyLimit, settings.warmupDay * 5);
+  }
+  return settings.dailyLimit;
+}
+
+// ── Export for both window (content/popup) and service worker (background) ──
+
+const StorageAPI = {
+  DEFAULT_SETTINGS,
+  getSettings,
+  saveSettings,
+  getTemplates,
+  saveTemplate,
+  deleteTemplate,
+  getDailyStats,
+  incrementDailyCount,
+  getWeeklyStats,
+  incrementWeeklyCount,
+  canSendMore,
+  getContacts,
+  isContactProcessed,
+  logContact,
+  getContactLog,
+  getAutomationState,
+  setAutomationState,
+  getActivityLog,
+  addActivityEntry,
+  advanceWarmupDay,
+  getEffectiveDailyLimit,
+};
+
 if (typeof window !== "undefined") {
-  window.Storage = {
-    getSettings,
-    saveSettings,
-    getTemplates,
-    saveTemplate,
-    deleteTemplate,
-    getDailyStats,
-    incrementDailyCount,
-    getWeeklyStats,
-    incrementWeeklyCount,
-    canSendMore,
-    getContacts,
-    isContactProcessed,
-    logContact,
-    getContactLog,
-    getAutomationState,
-    setAutomationState,
-    getActivityLog,
-    addActivityEntry,
-    advanceWarmupDay,
-  };
+  window.Storage = StorageAPI;
+}
+if (typeof self !== "undefined" && typeof window === "undefined") {
+  self.Storage = StorageAPI;
 }

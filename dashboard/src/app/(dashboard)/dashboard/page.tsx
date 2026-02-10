@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Send, Users, Megaphone, CalendarDays } from "lucide-react";
+import { timeAgo, getActivityDisplay } from "@/lib/utils";
 
 interface DashboardStats {
   sentToday: number;
@@ -31,8 +32,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetch("/api/dashboard/stats")
-      .then((r) => r.json())
-      .then(setStats);
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load stats");
+        return r.json();
+      })
+      .then(setStats)
+      .catch((e) => console.error("Dashboard stats error:", e));
   }, []);
 
   if (!stats) {
@@ -43,17 +48,6 @@ export default function DashboardPage() {
     (stats.sentToday / stats.dailyLimit) * 100,
     100
   );
-
-  function timeAgo(dateStr: string | null) {
-    if (!dateStr) return "Never";
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "Just now";
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -175,9 +169,7 @@ export default function DashboardPage() {
                     )}
                     {entry.data && (
                       <span className="text-muted-foreground text-xs">
-                        {(entry.data as Record<string, string>).name ||
-                          (entry.data as Record<string, string>).profileUrl ||
-                          ""}
+                        {getActivityDisplay(entry.data)}
                       </span>
                     )}
                   </div>

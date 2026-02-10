@@ -373,21 +373,7 @@ function setupPlaceholderButtons() {
 // ── Settings ──
 
 async function loadSettings() {
-  const defaults = {
-    dailyLimit: 25,
-    weeklyLimit: 100,
-    cooldownMin: 30000,
-    cooldownMax: 90000,
-    businessHoursOnly: true,
-    businessHoursStart: 9,
-    businessHoursEnd: 18,
-    warmupEnabled: true,
-    warmupDay: 1,
-    dryRun: false,
-  };
-
-  const { settings } = await chrome.storage.local.get("settings");
-  const s = { ...defaults, ...settings };
+  const s = await window.Storage.getSettings();
 
   document.getElementById("setting-daily-limit").value = s.dailyLimit;
   document.getElementById("setting-weekly-limit").value = s.weeklyLimit;
@@ -401,7 +387,7 @@ async function loadSettings() {
 
   // Warmup status
   if (s.warmupEnabled) {
-    const effectiveLimit = Math.min(s.dailyLimit, s.warmupDay * 5);
+    const effectiveLimit = window.Storage.getEffectiveDailyLimit(s);
     document.getElementById("warmup-status").textContent =
       `Day ${s.warmupDay}: Effective limit is ${effectiveLimit}/day (max ${s.dailyLimit})`;
   } else {

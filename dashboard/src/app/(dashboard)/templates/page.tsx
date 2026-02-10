@@ -45,8 +45,13 @@ export default function TemplatesPage() {
   }, []);
 
   async function loadTemplates() {
-    const res = await fetch("/api/templates");
-    setTemplates(await res.json());
+    try {
+      const res = await fetch("/api/templates");
+      if (!res.ok) throw new Error("Failed to load templates");
+      setTemplates(await res.json());
+    } catch (e) {
+      console.error("Templates error:", e);
+    }
   }
 
   function openEdit(template: Template) {

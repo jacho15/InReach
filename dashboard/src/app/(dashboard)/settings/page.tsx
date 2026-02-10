@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Copy, Plus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Settings {
   dailyLimit: number;
@@ -54,11 +55,19 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetch("/api/settings")
-      .then((r) => r.json())
-      .then(setSettings);
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load settings");
+        return r.json();
+      })
+      .then(setSettings)
+      .catch((e) => console.error("Settings error:", e));
     fetch("/api/keys")
-      .then((r) => r.json())
-      .then(setKeys);
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load keys");
+        return r.json();
+      })
+      .then(setKeys)
+      .catch((e) => console.error("Keys error:", e));
   }, []);
 
   async function saveSettings() {
@@ -176,17 +185,28 @@ export default function SettingsPage() {
                 Only send during business hours
               </p>
             </div>
-            <input
-              type="checkbox"
-              checked={settings.businessHoursOnly}
-              onChange={(e) =>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.businessHoursOnly}
+              onClick={() =>
                 setSettings({
                   ...settings,
-                  businessHoursOnly: e.target.checked,
+                  businessHoursOnly: !settings.businessHoursOnly,
                 })
               }
-              className="h-4 w-4"
-            />
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                settings.businessHoursOnly ? "bg-blue-600" : "bg-gray-200"
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform",
+                  settings.businessHoursOnly ? "translate-x-5" : "translate-x-0"
+                )}
+              />
+            </button>
           </div>
 
           {settings.businessHoursOnly && (
@@ -235,14 +255,25 @@ export default function SettingsPage() {
                 Gradually increase sending limits
               </p>
             </div>
-            <input
-              type="checkbox"
-              checked={settings.warmupEnabled}
-              onChange={(e) =>
-                setSettings({ ...settings, warmupEnabled: e.target.checked })
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.warmupEnabled}
+              onClick={() =>
+                setSettings({ ...settings, warmupEnabled: !settings.warmupEnabled })
               }
-              className="h-4 w-4"
-            />
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                settings.warmupEnabled ? "bg-blue-600" : "bg-gray-200"
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform",
+                  settings.warmupEnabled ? "translate-x-5" : "translate-x-0"
+                )}
+              />
+            </button>
           </div>
 
           <div className="flex items-center justify-between">
@@ -252,14 +283,25 @@ export default function SettingsPage() {
                 Simulate actions without sending requests
               </p>
             </div>
-            <input
-              type="checkbox"
-              checked={settings.dryRun}
-              onChange={(e) =>
-                setSettings({ ...settings, dryRun: e.target.checked })
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.dryRun}
+              onClick={() =>
+                setSettings({ ...settings, dryRun: !settings.dryRun })
               }
-              className="h-4 w-4"
-            />
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                settings.dryRun ? "bg-blue-600" : "bg-gray-200"
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform",
+                  settings.dryRun ? "translate-x-5" : "translate-x-0"
+                )}
+              />
+            </button>
           </div>
 
           <Button onClick={saveSettings} disabled={saving}>

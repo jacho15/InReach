@@ -36,8 +36,12 @@ export default function NewCampaignPage() {
 
   useEffect(() => {
     fetch("/api/templates")
-      .then((r) => r.json())
-      .then(setTemplates);
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load templates");
+        return r.json();
+      })
+      .then(setTemplates)
+      .catch((e) => console.error("Templates error:", e));
   }, []);
 
   async function create() {

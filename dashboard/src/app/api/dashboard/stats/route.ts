@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { handleApiError } from "@/lib/utils";
 
 export async function GET() {
   try {
@@ -59,7 +60,7 @@ export async function GET() {
       recentActivity,
       extensionLastSeen: latestApiKey?.lastUsed || null,
     });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error) {
+    return handleApiError(error);
   }
 }
