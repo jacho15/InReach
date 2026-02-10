@@ -4,15 +4,15 @@
 InReach is a **multi-user marketing SaaS product** that helps professionals automate LinkedIn outreach, manage conversations in a unified dashboard, and get notified on follow-ups. Users sign up, install the Chrome extension, and manage everything from a web dashboard.
 
 ### Product Phases
-- **Phase 1 (MVP)**: Chrome Extension — automated connection requests with personalized messages
-- **Phase 2**: Backend + Dashboard — campaign management, unified inbox, contact pipeline
+- ~~**Phase 1 (MVP)**: Chrome Extension — automated connection requests with personalized messages~~ ✅ Complete
+- ~~**Phase 2**: Backend + Dashboard — campaign management, unified inbox, contact pipeline~~ ✅ Complete
 - **Phase 3**: Notifications + Replies — real-time alerts, reply from dashboard, analytics
 
-> This document covers **Phase 1 (Extension MVP)** in full detail, with architectural notes for Phases 2-3 to ensure the MVP is built with future expansion in mind.
+> Phase 1 and Phase 2 are complete. Phase 3 is next.
 
 ---
 
-## Phase 1: Chrome Extension MVP
+## Phase 1: Chrome Extension MVP ✅
 
 ### Goal
 A Chrome Extension that automates personalized LinkedIn connection requests. The user provides a search URL and a message template, and the extension handles scraping, personalization, and sending — with safety limits to protect the account.
@@ -489,18 +489,16 @@ InReach/
 
 ---
 
-## Phase 2: Backend + Dashboard (Future — Architecture Notes)
-
-> Not built in Phase 1, but the extension MVP is designed to support this upgrade path.
+## Phase 2: Backend + Dashboard ✅
 
 ### Tech Stack
 | Layer | Technology | Rationale |
 |-------|-----------|-----------|
 | Frontend + API | **Next.js 16 (App Router)** | Full-stack React, API routes, server components |
-| Database | **PostgreSQL** + **Prisma ORM** | Relational — contacts, messages, campaigns have relationships |
-| Auth | **NextAuth** (Google OAuth) | Simple social login, no extra auth service needed |
+| Database | **Supabase** (PostgreSQL) + **Prisma ORM** | Managed Postgres with realtime, storage, and edge functions |
+| Auth | **Supabase Auth** (Google OAuth) | Unified auth + DB under one platform, no separate auth service |
 | Notifications | **Web Push** + **Resend** (email) | Real-time browser + email alerts |
-| Hosting | **Vercel** (app) + any PostgreSQL host | Fast deployment, flexible DB hosting |
+| Hosting | **Vercel** (app) + **Supabase** (db + auth) | Fast deployment, generous free tiers |
 
 ### Data Model (Relational)
 
@@ -578,20 +576,21 @@ Extension detects new LinkedIn message from tracked contact
 
 ---
 
-## Implementation Order (Phase 1 MVP)
+## Implementation Order (Phase 1 MVP) ✅
 
-### Step 1: Project Setup
+### Step 1: Project Setup ✅
 - Initialize `extension/` directory
 - Create `manifest.json`
 - Set up Tailwind CSS build pipeline
 - Create placeholder icon files
 
-### Step 2: Utility Layer
+### Step 2: Utility Layer ✅
 - `dom-selectors.js` — all LinkedIn selectors
 - `human-simulator.js` — delay, typing, scroll functions
 - `storage.js` — chrome.storage.local wrappers
+- `constants.js` — shared timing/limit constants
 
-### Step 3: Content Script Core
+### Step 3: Content Script Core ✅
 - `scrapeSearchResults()` and `scrapeProfileCard()`
 - `generateMessage()` template engine
 - `shouldSkip()` duplicate detection
@@ -599,14 +598,14 @@ Extension detects new LinkedIn message from tracked contact
 - `detectWarnings()` safety detection
 - Message listener for background communication
 
-### Step 4: Background Service Worker
+### Step 4: Background Service Worker ✅
 - State machine (idle/running/paused)
 - Message handlers for popup and content script communication
 - Daily/weekly limit enforcement
 - Tab management and content script injection
 - Activity logging
 
-### Step 5: Popup UI
+### Step 5: Popup UI ✅
 - Dashboard view with stats
 - Campaign setup (search URL + template)
 - Template editor with placeholders
@@ -614,7 +613,7 @@ Extension detects new LinkedIn message from tracked contact
 - Activity log viewer
 - Start/Stop controls
 
-### Step 6: Testing & Hardening
+### Step 6: Testing & Hardening ✅
 - Unit tests for template engine and storage logic
 - Dry-run mode end-to-end testing
 - Selector validation against live LinkedIn
